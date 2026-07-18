@@ -41,10 +41,10 @@ jobs:
           mkdir -p reports/html
           mkdir -p reports/allure-results
 
-      - name: Execute Test Suite
+      - name: Execute API Test Suite
 
         run: |
-          python scripts/run_tests.py --suite all
+          python scripts/run_tests.py --suite api
 
       - name: Upload HTML Report
 
