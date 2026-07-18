@@ -1,5 +1,7 @@
 from flask.testing import FlaskClient
+import pytest
 
+pytestmark = pytest.mark.api
 
 def test_health_api(
     api_client: FlaskClient,
