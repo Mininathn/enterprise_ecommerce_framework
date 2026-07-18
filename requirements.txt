@@ -1,0 +1,16 @@
+pytest==8.4.1
+pytest-html==4.1.1
+pytest-xdist==3.8.0
+pytest-rerunfailures==15.1
+allure-pytest==2.15.0
+python-dotenv==1.1.1
+PyYAML==6.0.2
+oracledb==3.3.0
+mysql-connector-python==9.4.0
+pandas==2.3.1
+openpyxl==3.1.5
+requests==2.32.4
+playwright==1.54.0
+Flask
+pytest-html
+allure-pytest

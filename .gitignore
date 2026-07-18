@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Virtual environment
+venv/
+.venv/
+
+# Sensitive configuration
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# Logs and reports
+logs/
+reports/
+allure-results/
+allure-report/
+pytest-report.html
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Test reports
+reports/html/*.html
+reports/allure-results/*
+allure-report/
+
+# Runtime files
+*.log
+
+# Secrets and local configuration
+.env
+config/*.local.yaml
+config/*.local.json

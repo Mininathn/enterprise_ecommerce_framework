@@ -1,0 +1,274 @@
+data_quality_rules:
+
+  # ==========================================================
+  # Oracle source rules
+  # ==========================================================
+
+  - rule_id: ORA_CUSTOMER_ID_NOT_NULL
+    description: Customer ID must not be null
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: not_null
+    columns:
+      - CUSTOMER_ID
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_NAME_NOT_NULL
+    description: Customer first name and last name must not be null
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: not_null
+    columns:
+      - FIRST_NAME
+      - LAST_NAME
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_ID_UNIQUE
+    description: Customer ID must be unique
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: unique
+    columns:
+      - CUSTOMER_ID
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_STATUS_ALLOWED
+    description: Customer status must contain an allowed value
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: allowed_values
+    columns:
+      - CUSTOMER_STATUS
+    allowed_values:
+      - ACTIVE
+      - INACTIVE
+      - BLOCKED
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_GENDER_ALLOWED
+    description: Gender must contain an allowed value
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: allowed_values
+    columns:
+      - GENDER
+    allowed_values:
+      - MALE
+      - FEMALE
+      - OTHER
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_EMAIL_PATTERN
+    description: Source customer email must follow a valid email pattern
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: regex
+    columns:
+      - EMAIL_ADDRESS
+    pattern: '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+    max_failed_rows: 1
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_PHONE_PATTERN
+    description: Phone number must contain exactly ten digits
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: regex
+    columns:
+      - PHONE_NUMBER
+    pattern: '^[0-9]{10}$'
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_PHONE_LENGTH
+    description: Phone number length must be exactly ten characters
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: length
+    columns:
+      - PHONE_NUMBER
+    minimum_length: 10
+    maximum_length: 10
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_ID_RANGE
+    description: Customer ID must be a positive value
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: range
+    columns:
+      - CUSTOMER_ID
+    minimum_value: 1
+    maximum_value: 9999999999
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_ADDRESS_CUSTOMER_REFERENCE
+    description: Every source address must reference a source customer
+    database: oracle
+    table: SRC_CUSTOMER_ADDRESS
+    rule_type: referential_integrity
+    columns:
+      - CUSTOMER_ID
+    parent_table: SRC_CUSTOMER
+    parent_columns:
+      - CUSTOMER_ID
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: ORA_CUSTOMER_SOURCE_COUNT
+    description: Oracle source must contain five test customers
+    database: oracle
+    table: SRC_CUSTOMER
+    rule_type: row_count
+    minimum_count: 5
+    maximum_count: 5
+    enabled: true
+
+  # ==========================================================
+  # MySQL target rules
+  # ==========================================================
+
+  - rule_id: MYSQL_GOLDEN_ID_NOT_NULL
+    description: Golden customer ID must not be null
+    database: mysql
+    table: customer_golden
+    rule_type: not_null
+    columns:
+      - golden_customer_id
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: MYSQL_GOLDEN_NAME_NOT_NULL
+    description: Golden customer names must not be null
+    database: mysql
+    table: customer_golden
+    rule_type: not_null
+    columns:
+      - first_name
+      - last_name
+      - full_name
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: MYSQL_GOLDEN_EMAIL_PHONE_UNIQUE
+    description: Email and phone combination must be unique
+    database: mysql
+    table: customer_golden
+    rule_type: unique
+    columns:
+      - email_address
+      - phone_number
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: MYSQL_GOLDEN_STATUS_ALLOWED
+    description: Golden customer status must contain an allowed value
+    database: mysql
+    table: customer_golden
+    rule_type: allowed_values
+    columns:
+      - customer_status
+    allowed_values:
+      - ACTIVE
+      - INACTIVE
+      - BLOCKED
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: MYSQL_GOLDEN_PHONE_PATTERN
+    description: Target phone must contain exactly ten digits
+    database: mysql
+    table: customer_golden
+    rule_type: regex
+    columns:
+      - phone_number
+    pattern: '^[0-9]{10}$'
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: MYSQL_GOLDEN_SOURCE_COUNT_RANGE
+    description: Source-record count must be between one and ten
+    database: mysql
+    table: customer_golden
+    rule_type: range
+    columns:
+      - source_record_count
+    minimum_value: 1
+    maximum_value: 10
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: MYSQL_XREF_GOLDEN_REFERENCE
+    description: Every XREF must reference an existing golden customer
+    database: mysql
+    table: customer_xref
+    rule_type: referential_integrity
+    columns:
+      - golden_customer_id
+    parent_table: customer_golden
+    parent_columns:
+      - golden_customer_id
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: MYSQL_ADDRESS_GOLDEN_REFERENCE
+    description: Every target address must reference a golden customer
+    database: mysql
+    table: customer_address
+    rule_type: referential_integrity
+    columns:
+      - golden_customer_id
+    parent_table: customer_golden
+    parent_columns:
+      - golden_customer_id
+    max_failed_rows: 0
+    enabled: true
+
+  - rule_id: MYSQL_GOLDEN_ROW_COUNT
+    description: Target must contain three golden customer records
+    database: mysql
+    table: customer_golden
+    rule_type: row_count
+    minimum_count: 3
+    maximum_count: 3
+    enabled: true
+
+  - rule_id: MYSQL_XREF_ROW_COUNT
+    description: Target must contain four source cross-reference records
+    database: mysql
+    table: customer_xref
+    rule_type: row_count
+    minimum_count: 4
+    maximum_count: 4
+    enabled: true
+
+  - rule_id: MYSQL_REJECTED_ROW_COUNT
+    description: Target must contain one rejected customer record
+    database: mysql
+    table: etl_rejected_record
+    rule_type: row_count
+    minimum_count: 1
+    maximum_count: 1
+    enabled: true
+
+  - rule_id: MYSQL_COMPLETED_BATCH
+    description: Latest ETL batch must be completed
+    database: mysql
+    rule_type: custom_sql
+    sql: |
+      SELECT COUNT(*)
+      FROM etl_batch_control
+      WHERE batch_id = (
+          SELECT MAX(batch_id)
+          FROM etl_batch_control
+      )
+      AND batch_status <> 'COMPLETED'
+    max_failed_rows: 0
+    enabled: true

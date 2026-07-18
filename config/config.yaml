@@ -1,0 +1,25 @@
+project:
+  name: Enterprise E-commerce Data Automation Framework
+  environment: local
+
+databases:
+  oracle:
+    role: source
+    host_env: ORACLE_HOST
+    port_env: ORACLE_PORT
+    sid_env: ORACLE_SID
+    username_env: ORACLE_USER
+    password_env: ORACLE_PASSWORD
+
+  mysql:
+    role: target
+    host_env: MYSQL_HOST
+    port_env: MYSQL_PORT
+    database_env: MYSQL_DATABASE
+    username_env: MYSQL_USER
+    password_env: MYSQL_PASSWORD
+
+logging:
+  level: INFO
+  directory: logs
+  filename: automation.log
