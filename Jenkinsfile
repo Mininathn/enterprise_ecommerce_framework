@@ -22,7 +22,7 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Source Code') {
             steps {
                 checkout scm
             }
@@ -31,8 +31,8 @@ pipeline {
         stage('Python Version') {
             steps {
                 bat '''
-                    "%PYTHON_EXE%" --version
-                    "%PYTHON_EXE%" -m pip --version
+                "%PYTHON_EXE%" --version
+                "%PYTHON_EXE%" -m pip --version
                 '''
             }
         }
@@ -40,9 +40,9 @@ pipeline {
         stage('Create Virtual Environment') {
             steps {
                 bat '''
-                    if not exist venv (
-                        "%PYTHON_EXE%" -m venv venv
-                    )
+                if not exist venv (
+                    "%PYTHON_EXE%" -m venv venv
+                )
                 '''
             }
         }
@@ -50,9 +50,9 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 bat '''
-                    call venv\\Scripts\\activate
-                    python -m pip install --upgrade pip
-                    pip install -r requirements.txt
+                call venv\\Scripts\\activate
+                python -m pip install --upgrade pip
+                pip install -r requirements.txt
                 '''
             }
         }
@@ -60,62 +60,78 @@ pipeline {
         stage('Create Report Directories') {
             steps {
                 bat '''
-                    if not exist reports mkdir reports
-                    if not exist reports\\html mkdir reports\\html
-                    if not exist reports\\allure-results mkdir reports\\allure-results
+                if not exist reports mkdir reports
+                if not exist reports\\html mkdir reports\\html
+                if not exist reports\\allure-results mkdir reports\\allure-results
+                if not exist reports\\junit mkdir reports\\junit
                 '''
             }
         }
 
-        stage('Run Tests') {
+        stage('Run Test Suite') {
             steps {
+
                 withCredentials([
+
                     string(
                         credentialsId: 'oracle-host',
                         variable: 'ORACLE_HOST'
                     ),
+
                     string(
                         credentialsId: 'oracle-port',
                         variable: 'ORACLE_PORT'
                     ),
+
                     string(
-                        credentialsId: 'oracle-service',
-                        variable: 'ORACLE_SERVICE'
+                        credentialsId: 'oracle-sid',
+                        variable: 'ORACLE_SID'
                     ),
+
                     usernamePassword(
                         credentialsId: 'oracle-credentials',
                         usernameVariable: 'ORACLE_USER',
                         passwordVariable: 'ORACLE_PASSWORD'
                     ),
+
                     string(
                         credentialsId: 'mysql-host',
                         variable: 'MYSQL_HOST'
                     ),
+
                     string(
                         credentialsId: 'mysql-port',
                         variable: 'MYSQL_PORT'
                     ),
+
                     string(
                         credentialsId: 'mysql-database',
                         variable: 'MYSQL_DATABASE'
                     ),
+
                     usernamePassword(
                         credentialsId: 'mysql-credentials',
                         usernameVariable: 'MYSQL_USER',
                         passwordVariable: 'MYSQL_PASSWORD'
                     )
+
                 ]) {
+
                     bat '''
-                        call venv\\Scripts\\activate
-                        python scripts\\run_tests.py --suite %TEST_SUITE%
+                    call venv\\Scripts\\activate
+
+                    python scripts\\run_tests.py --suite %TEST_SUITE%
                     '''
                 }
             }
         }
+
     }
 
     post {
+
         always {
+
             archiveArtifacts(
                 artifacts: 'reports/**/*',
                 allowEmptyArchive: true,
@@ -126,22 +142,25 @@ pipeline {
                 testResults: 'reports/junit/*.xml',
                 allowEmptyResults: true
             )
+
+            echo "Reports archived successfully."
         }
 
         success {
-            echo 'Enterprise Ecommerce Framework pipeline completed successfully.'
+            echo "======================================="
+            echo " Enterprise ETL Pipeline PASSED"
+            echo "======================================="
         }
 
         failure {
-            echo 'Enterprise Ecommerce Framework pipeline failed. Check the console logs and reports.'
+            echo "======================================="
+            echo " Enterprise ETL Pipeline FAILED"
+            echo "Check Console Output"
+            echo "======================================="
         }
 
         cleanup {
-            bat '''
-                if exist reports\\allure-results (
-                    echo Allure results are available.
-                )
-            '''
+            cleanWs()
         }
     }
 }

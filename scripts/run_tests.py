@@ -6,8 +6,10 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPORT_ROOT = PROJECT_ROOT / "reports"
+
 HTML_REPORT_DIR = REPORT_ROOT / "html"
 ALLURE_RESULTS_DIR = REPORT_ROOT / "allure-results"
+JUNIT_REPORT_DIR = REPORT_ROOT / "junit"
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -43,6 +45,11 @@ def build_command(suite: str) -> list[str]:
         exist_ok=True,
     )
 
+    JUNIT_REPORT_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     report_name = (
         "regression"
         if suite == "all"
@@ -60,6 +67,7 @@ def build_command(suite: str) -> list[str]:
         "--self-contained-html",
         f"--alluredir={ALLURE_RESULTS_DIR}",
         "--clean-alluredir",
+        f"--junitxml={JUNIT_REPORT_DIR / 'test-results.xml'}",
     ]
 
     if suite not in {
