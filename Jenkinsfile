@@ -1,4 +1,74 @@
-stage('Run Test Suite') {
+pipeline {
+    agent any
+
+    parameters {
+        choice(
+            name: 'TEST_SUITE',
+            choices: [
+                'api',
+                'all',
+                'database',
+                'data_quality',
+                'regression'
+            ],
+            description: 'Select the test suite to execute'
+        )
+    }
+
+    environment {
+        PYTHON_EXE = 'C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
+        PIP_DISABLE_PIP_VERSION_CHECK = '1'
+    }
+
+    stages {
+
+        stage('Checkout Source Code') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Python Version') {
+            steps {
+                bat '''
+                "%PYTHON_EXE%" --version
+                "%PYTHON_EXE%" -m pip --version
+                '''
+            }
+        }
+
+        stage('Create Virtual Environment') {
+            steps {
+                bat '''
+                if not exist venv (
+                    "%PYTHON_EXE%" -m venv venv
+                )
+                '''
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                bat '''
+                call venv\\Scripts\\activate
+                python -m pip install --upgrade pip
+                pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Create Report Directories') {
+            steps {
+                bat '''
+                if not exist reports mkdir reports
+                if not exist reports\\html mkdir reports\\html
+                if not exist reports\\allure-results mkdir reports\\allure-results
+                if not exist reports\\junit mkdir reports\\junit
+                '''
+            }
+        }
+
+        stage('Run Test Suite') {
     steps {
 
         withCredentials([
