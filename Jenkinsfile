@@ -23,7 +23,7 @@ pipeline {
                 'data_quality',
                 'regression',
                 'all'
-            ],
+        ],
             description: 'Select the test suite to execute'
         )
     }
@@ -179,7 +179,7 @@ pipeline {
             echo 'Publishing Jenkins test reports...'
 
             archiveArtifacts(
-                artifacts: 'reports/**/*',
+                artifacts: 'reports /**/*',
                 allowEmptyArchive: true,
                 fingerprint: true
             )
@@ -189,6 +189,18 @@ pipeline {
                 allowEmptyResults: true,
                 keepLongStdio: true
             )
+
+            allure([
+                 includeProperties: false,
+                 jdk: '',
+                 properties: [],
+                 reportBuildPolicy: 'ALWAYS',
+                 results: [
+                    [
+                        path: 'reports/allure-results'
+                    ]
+                ]
+            ])
 
             echo 'Reports archived successfully.'
         }
