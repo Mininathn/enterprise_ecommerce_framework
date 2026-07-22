@@ -1,242 +1,294 @@
-pipeline {
-    agent any
+post {
 
-    options {
-        skipDefaultCheckout(true)
-        timestamps()
-        disableConcurrentBuilds()
-        buildDiscarder(
-            logRotator(
-                numToKeepStr: '10',
-                artifactNumToKeepStr: '5'
-            )
+    always {
+
+        echo "Publishing Reports..."
+
+        archiveArtifacts(
+            artifacts: 'reports/**/*',
+            allowEmptyArchive: true,
+            fingerprint: true
         )
-    }
 
-    parameters {
-        choice(
-            name: 'TEST_SUITE',
-            choices: [
-                'api',
-                'smoke',
-                'database',
-                'data_quality',
-                'regression',
-                'all'
-        ],
-            description: 'Select the test suite to execute'
+        junit(
+            testResults: 'reports/junit/test-results.xml',
+            allowEmptyResults: true,
+            keepLongStdio: true
         )
-    }
 
-    environment {
-        PYTHON_EXE = 'C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
-        VENV_PYTHON = 'venv\\Scripts\\python.exe'
-        VENV_PIP = 'venv\\Scripts\\pip.exe'
-    }
-
-    stages {
-        stage('Checkout Source Code') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Python Version') {
-            steps {
-                bat '''
-                echo ===========================================
-                echo Python Environment
-                echo ===========================================
-
-                "%PYTHON_EXE%" --version
-                "%PYTHON_EXE%" -m pip --version
-                '''
-            }
-        }
-
-        stage('Create Virtual Environment') {
-            steps {
-                bat '''
-                echo ===========================================
-                echo Creating Virtual Environment
-                echo ===========================================
-
-                if not exist venv (
-                    "%PYTHON_EXE%" -m venv venv
-                ) else (
-                    echo Virtual environment already exists.
-                )
-                '''
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                bat '''
-                echo ===========================================
-                echo Installing Dependencies
-                echo ===========================================
-
-                call venv\\Scripts\\activate
-
-                python -m pip install --upgrade pip
-                python -m pip install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Create Report Directories') {
-            steps {
-                bat '''
-                echo ===========================================
-                echo Creating Report Directories
-                echo ===========================================
-
-                if not exist reports mkdir reports
-                if not exist reports\\html mkdir reports\\html
-                if not exist reports\\allure-results mkdir reports\\allure-results
-                if not exist reports\\junit mkdir reports\\junit
-                '''
-            }
-        }
-
-        stage('Run Test Suite') {
-            steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'oracle-host',
-                        variable: 'ORACLE_HOST'
-                    ),
-
-                    string(
-                        credentialsId: 'oracle-port',
-                        variable: 'ORACLE_PORT'
-                    ),
-
-                    string(
-                        credentialsId: 'oracle-sid',
-                        variable: 'ORACLE_SID'
-                    ),
-
-                    usernamePassword(
-                        credentialsId: 'oracle-credentials',
-                        usernameVariable: 'ORACLE_USER',
-                        passwordVariable: 'ORACLE_PASSWORD'
-                    ),
-
-                    string(
-                        credentialsId: 'mysql-host',
-                        variable: 'MYSQL_HOST'
-                    ),
-
-                    string(
-                        credentialsId: 'mysql-port',
-                        variable: 'MYSQL_PORT'
-                    ),
-
-                    string(
-                        credentialsId: 'mysql-database',
-                        variable: 'MYSQL_DATABASE'
-                    ),
-
-                    usernamePassword(
-                        credentialsId: 'mysql-credentials',
-                        usernameVariable: 'MYSQL_USER',
-                        passwordVariable: 'MYSQL_PASSWORD'
-                    )
-                ]) {
-                    script {
-                        def selectedSuite = params.TEST_SUITE?.trim()
-
-                        if (!selectedSuite) {
-                            selectedSuite = 'api'
-                        }
-
-                        echo "Selected test suite: ${selectedSuite}"
-
-                        withEnv([
-                            "SELECTED_TEST_SUITE=${selectedSuite}"
-                        ]) {
-                            bat '''
-                            echo ===========================================
-                            echo Enterprise Ecommerce ETL Framework
-                            echo Selected Test Suite: %SELECTED_TEST_SUITE%
-                            echo ===========================================
-
-                            call venv\\Scripts\\activate
-
-                            python scripts\\run_tests.py --suite %SELECTED_TEST_SUITE%
-                            '''
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo 'Publishing Jenkins test reports...'
-
-            archiveArtifacts(
-                artifacts: 'reports /**/*',
-                allowEmptyArchive: true,
-                fingerprint: true
-            )
-
-            junit(
-                testResults: 'reports/junit/test-results.xml',
-                allowEmptyResults: true,
-                keepLongStdio: true
-            )
-
-            allure([
-                 includeProperties: false,
-                 jdk: '',
-                 properties: [],
-                 reportBuildPolicy: 'ALWAYS',
-                 results: [
-                    [
-                        path: 'reports/allure-results'
-                    ]
+        allure([
+            includeProperties: false,
+            jdk: '',
+            properties: [],
+            reportBuildPolicy: 'ALWAYS',
+            results: [
+                [
+                    path: 'reports/allure-results'
                 ]
-            ])
+            ]
+        ])
 
-            echo 'Reports archived successfully.'
-        }
+        echo "Reports Published Successfully."
+    }
 
-        success {
-            echo '''
-            =======================================
-            Enterprise ETL Pipeline SUCCESS
-            All selected tests passed.
-            =======================================
-            '''
-        }
+    success {
 
-        unstable {
-            echo '''
-            =======================================
-            Enterprise ETL Pipeline UNSTABLE
-            Review the published test results.
-            =======================================
-            '''
-        }
+        emailext(
+            mimeType: 'text/html',
+            to: 'nmininath1@gmail.com',
+            subject: "SUCCESS - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            body: """
+<html>
+<head>
+<style>
+table {
+    border-collapse: collapse;
+}
+td, th {
+    border:1px solid #cccccc;
+    padding:8px;
+}
+</style>
+</head>
 
-        failure {
-            echo '''
-            =======================================
-            Enterprise ETL Pipeline FAILED
-            Check the Jenkins Console Output.
-            =======================================
-            '''
-        }
+<body>
 
-        cleanup {
-            cleanWs(
-                deleteDirs: true,
-                disableDeferredWipeout: false
-            )
-        }
+<h2 style="color:green;">
+Enterprise Ecommerce ETL Framework
+</h2>
+
+<h3>
+Build Completed Successfully
+</h3>
+
+<table>
+
+<tr>
+<th>Job Name</th>
+<td>${env.JOB_NAME}</td>
+</tr>
+
+<tr>
+<th>Build Number</th>
+<td>#${env.BUILD_NUMBER}</td>
+</tr>
+
+<tr>
+<th>Test Suite</th>
+<td>${params.TEST_SUITE}</td>
+</tr>
+
+<tr>
+<th>Status</th>
+<td style="color:green;"><b>SUCCESS</b></td>
+</tr>
+
+<tr>
+<th>Build URL</th>
+<td>
+<a href="${env.BUILD_URL}">
+${env.BUILD_URL}
+</a>
+</td>
+</tr>
+
+</table>
+
+<br>
+
+<b>Pipeline Summary</b>
+
+<ul>
+<li>Source Code Checked Out</li>
+<li>Python Environment Created</li>
+<li>Dependencies Installed</li>
+<li>Docker Image Built</li>
+<li>Docker Container Executed</li>
+<li>JUnit Report Generated</li>
+<li>Allure Report Generated</li>
+<li>Artifacts Archived</li>
+</ul>
+
+</body>
+</html>
+""",
+            attachmentsPattern: 'reports/**/*'
+        )
+
+        echo '''
+=========================================================
+Enterprise Ecommerce ETL Framework
+
+BUILD SUCCESS
+
+Docker Image Built Successfully
+
+Docker Container Executed Successfully
+
+JUnit Report Published
+
+Allure Report Published
+
+Artifacts Archived Successfully
+=========================================================
+'''
+    }
+
+    unstable {
+
+        emailext(
+            mimeType: 'text/html',
+            to: 'nmininath1@gmail.com',
+            subject: "UNSTABLE - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            body: """
+<html>
+
+<h2 style="color:orange;">
+Enterprise Ecommerce ETL Framework
+</h2>
+
+<h3>
+Build is UNSTABLE
+</h3>
+
+<table border="1" cellpadding="8">
+
+<tr>
+<td><b>Job</b></td>
+<td>${env.JOB_NAME}</td>
+</tr>
+
+<tr>
+<td><b>Build</b></td>
+<td>#${env.BUILD_NUMBER}</td>
+</tr>
+
+<tr>
+<td><b>Suite</b></td>
+<td>${params.TEST_SUITE}</td>
+</tr>
+
+<tr>
+<td><b>Status</b></td>
+<td style="color:orange;"><b>UNSTABLE</b></td>
+</tr>
+
+<tr>
+<td><b>Build URL</b></td>
+<td>
+<a href="${env.BUILD_URL}">
+${env.BUILD_URL}
+</a>
+</td>
+</tr>
+
+</table>
+
+<p>
+Some tests failed. Please review the Allure Report and Jenkins Console Output.
+</p>
+
+</html>
+""",
+            attachmentsPattern: 'reports/**/*'
+        )
+
+        echo '''
+=========================================================
+BUILD UNSTABLE
+
+Some tests failed.
+
+Please review the Allure Report.
+=========================================================
+'''
+    }
+
+    failure {
+
+        emailext(
+            mimeType: 'text/html',
+            to: 'nmininath1@gmail.com',
+            subject: "FAILED - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            body: """
+<html>
+
+<h2 style="color:red;">
+Enterprise Ecommerce ETL Framework
+</h2>
+
+<h3>
+Build FAILED
+</h3>
+
+<table border="1" cellpadding="8">
+
+<tr>
+<td><b>Job</b></td>
+<td>${env.JOB_NAME}</td>
+</tr>
+
+<tr>
+<td><b>Build</b></td>
+<td>#${env.BUILD_NUMBER}</td>
+</tr>
+
+<tr>
+<td><b>Suite</b></td>
+<td>${params.TEST_SUITE}</td>
+</tr>
+
+<tr>
+<td><b>Status</b></td>
+<td style="color:red;"><b>FAILED</b></td>
+</tr>
+
+<tr>
+<td><b>Build URL</b></td>
+<td>
+<a href="${env.BUILD_URL}">
+${env.BUILD_URL}
+</a>
+</td>
+</tr>
+
+</table>
+
+<p>
+Please review:
+</p>
+
+<ul>
+<li>Jenkins Console Output</li>
+<li>Docker Logs</li>
+<li>JUnit Report</li>
+<li>Allure Report</li>
+</ul>
+
+</html>
+""",
+            attachmentsPattern: 'reports/**/*'
+        )
+
+        echo '''
+=========================================================
+BUILD FAILED
+
+Please review:
+
+• Jenkins Console Output
+• Docker Logs
+• Allure Report
+
+=========================================================
+'''
+    }
+
+    cleanup {
+
+        cleanWs(
+            deleteDirs: true,
+            disableDeferredWipeout: false
+        )
     }
 }
