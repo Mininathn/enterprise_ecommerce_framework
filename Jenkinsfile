@@ -2,6 +2,10 @@ pipeline {
 
     agent any
 
+    environment {
+        PYTHON_EXE = "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
+    }
+
 
     parameters {
 
@@ -16,14 +20,11 @@ pipeline {
             ],
             description: 'Select Test Suite'
         )
-
     }
 
 
-    environment {
-
-        IMAGE_NAME = "enterprise-ecommerce-framework"
-
+    triggers {
+        cron('H 9 * * *')
     }
 
 
@@ -36,25 +37,12 @@ pipeline {
 
                 echo "Checking out source code..."
 
-                git(
-                    branch: 'main',
-                    url: 'https://github.com/Mininathn/enterprise_ecommerce_framework.git'
-                )
+                checkout scm
 
             }
-
         }
 
-         stage('Install Dependencies') {
-            steps {
-                echo "Installing Python dependencies..."
 
-                bat """
-                %PYTHON_EXE% -m pip install --upgrade pip
-                %PYTHON_EXE% -m pip install -r requirements.txt
-                """
-            }
-        }
 
         stage('Install Dependencies') {
 
@@ -63,80 +51,54 @@ pipeline {
                 echo "Installing Python dependencies..."
 
                 bat """
+                echo Python Version:
+                %PYTHON_EXE% --version
 
-                python -m pip install --upgrade pip
+                echo Installing packages...
 
-                pip install -r requirements.txt
+                %PYTHON_EXE% -m pip install --upgrade pip
 
+                %PYTHON_EXE% -m pip install -r requirements.txt
                 """
 
             }
-
         }
 
 
 
-        stage('Build Docker Image') {
+        stage('Run Tests') {
 
             steps {
 
-                echo "Building Docker Image..."
+                echo "Running Test Suite: ${params.TEST_SUITE}"
+
+
+                bat """
+                %PYTHON_EXE% -m pytest tests ^
+                -m ${params.TEST_SUITE} ^
+                --alluredir=allure-results ^
+                --html=reports\\pytest-report.html ^
+                --self-contained-html
+                """
+
+            }
+        }
+
+
+
+        stage('Generate Test Summary') {
+
+            steps {
+
+                echo "Generating test summary..."
 
                 bat """
 
-                docker build -t %IMAGE_NAME% .
+                dir allure-results
 
                 """
 
             }
-
-        }
-
-
-
-        stage('Run Docker Container') {
-
-            steps {
-
-                echo "Running Tests Inside Docker Container..."
-
-                bat """
-
-                docker run --rm ^
-                -e TEST_SUITE=${params.TEST_SUITE} ^
-                -v "%WORKSPACE%\\reports:/app/reports" ^
-                %IMAGE_NAME%
-
-                """
-
-            }
-
-        }
-
-
-
-        stage('Test Result Summary') {
-
-            steps {
-
-                echo """
-
-                =========================================
-
-                Enterprise Ecommerce ETL Framework
-
-                Test Suite : ${params.TEST_SUITE}
-
-                Docker Execution Completed
-
-                Reports Generated
-
-                =========================================
-
-                """
-
-            }
-
         }
 
 
@@ -150,371 +112,49 @@ pipeline {
         always {
 
 
-            echo "Publishing Test Reports..."
-
-
-
-            archiveArtifacts(
-
-                artifacts: 'reports/**/*',
-
-                allowEmptyArchive: true,
-
-                fingerprint: true
-
-            )
-
-
-
-            junit(
-
-                testResults: 'reports/junit/test-results.xml',
-
-                allowEmptyResults: true,
-
-                keepLongStdio: true
-
-            )
-
+            echo "Publishing Allure Report..."
 
 
             allure(
-
                 includeProperties: false,
-
                 jdk: '',
-
-                properties: [],
-
-                reportBuildPolicy: 'ALWAYS',
-
                 results: [
-
                     [
-
-                        path: 'reports/allure-results'
-
+                        path: 'allure-results'
                     ]
-
                 ]
-
             )
 
 
-
-            echo "Reports Published Successfully."
-
+            publishHTML(
+                target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'reports',
+                    reportFiles: 'pytest-report.html',
+                    reportName: 'Pytest HTML Report'
+                ]
+            )
 
         }
-
 
 
 
         success {
 
-
-            echo """
-
-            =========================================
-
-            BUILD SUCCESS
-
-            Enterprise Ecommerce ETL Framework
-
-            Docker Image Built Successfully
-
-            Docker Container Executed Successfully
-
-            JUnit Report Published
-
-            Allure Report Published
-
-            =========================================
-
-            """
-
-
-
-            emailext(
-
-                mimeType: 'text/html',
-
-                to: 'nmininath1@gmail.com',
-
-                subject: "SUCCESS - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-
-                body: """
-
-<html>
-
-<body>
-
-<h2 style="color:green">
-
-Enterprise Ecommerce ETL Framework
-
-</h2>
-
-
-<h3>
-
-Build Completed Successfully
-
-</h3>
-
-
-<table border="1" cellpadding="8">
-
-
-<tr>
-
-<td><b>Job Name</b></td>
-
-<td>${env.JOB_NAME}</td>
-
-</tr>
-
-
-<tr>
-
-<td><b>Build Number</b></td>
-
-<td>${env.BUILD_NUMBER}</td>
-
-</tr>
-
-
-<tr>
-
-<td><b>Test Suite</b></td>
-
-<td>${params.TEST_SUITE}</td>
-
-</tr>
-
-
-<tr>
-
-<td><b>Status</b></td>
-
-<td>
-
-SUCCESS
-
-</td>
-
-</tr>
-
-
-<tr>
-
-<td><b>Build URL</b></td>
-
-<td>
-
-${env.BUILD_URL}
-
-</td>
-
-</tr>
-
-
-</table>
-
-
-<br>
-
-
-<b>Completed Activities:</b>
-
-
-<ul>
-
-<li>Source Code Checkout</li>
-
-<li>Dependencies Installation</li>
-
-<li>Docker Image Build</li>
-
-<li>Docker Container Execution</li>
-
-<li>JUnit Report Generation</li>
-
-<li>Allure Report Generation</li>
-
-<li>Artifact Archiving</li>
-
-</ul>
-
-
-</body>
-
-</html>
-
-"""
-
-            )
-
+            echo "Pipeline completed successfully."
 
         }
-
-
-
-
-        unstable {
-
-
-            echo "BUILD UNSTABLE"
-
-
-
-            emailext(
-
-                mimeType: 'text/html',
-
-                to: 'nmininath1@gmail.com',
-
-                subject: "UNSTABLE - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-
-                body: """
-
-Enterprise Ecommerce ETL Framework
-
-Build is UNSTABLE.
-
-Some tests failed.
-
-Please check Jenkins reports.
-
-Build URL:
-
-${env.BUILD_URL}
-
-"""
-
-            )
-
-
-        }
-
 
 
 
         failure {
 
-
-            echo """
-
-            =========================================
-
-            BUILD FAILED
-
-            Check:
-
-            - Jenkins Console Logs
-
-            - Docker Logs
-
-            - JUnit Report
-
-            - Allure Report
-
-            =========================================
-
-            """
-
-
-
-            emailext(
-
-                mimeType: 'text/html',
-
-                to: 'nmininath1@gmail.com',
-
-                subject: "FAILED - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-
-                body: """
-
-<html>
-
-<body>
-
-
-<h2 style="color:red">
-
-Enterprise Ecommerce ETL Framework
-
-</h2>
-
-
-<h3>
-
-Build FAILED
-
-</h3>
-
-
-<p>
-
-Please check:
-
-</p>
-
-
-<ul>
-
-<li>Jenkins Console Output</li>
-
-<li>Docker Execution Logs</li>
-
-<li>JUnit Report</li>
-
-<li>Allure Report</li>
-
-</ul>
-
-
-<p>
-
-Build URL:
-
-${env.BUILD_URL}
-
-</p>
-
-
-</body>
-
-</html>
-
-"""
-
-            )
-
+            echo "Pipeline failed. Check console logs."
 
         }
-
-
-
-
-        cleanup {
-
-
-            echo "Cleaning Workspace..."
-
-            cleanWs(
-
-                deleteDirs: true,
-
-                disableDeferredWipeout: false
-
-            )
-
-
-        }
-
 
     }
-
 
 }
