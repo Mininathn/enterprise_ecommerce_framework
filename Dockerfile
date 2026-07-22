@@ -1,19 +1,15 @@
-FROM mcr.microsoft.com/playwright/python:v1.54.0-noble
-
+FROM python:3.12-slim
 
 WORKDIR /app
 
-
 COPY requirements.txt .
-
 
 RUN pip install --upgrade pip
 
-
 RUN pip install -r requirements.txt
-
 
 COPY . .
 
+RUN playwright install chromium
 
-CMD ["pytest", "-v", "--alluredir=reports/allure-results"]
+CMD ["pytest"]
