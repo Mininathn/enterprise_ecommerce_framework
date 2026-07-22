@@ -12,6 +12,7 @@ pipeline {
                 'smoke',
                 'regression',
                 'ddt'
+                'api'
             ],
             description: 'Select Test Suite'
         )
