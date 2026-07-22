@@ -45,7 +45,16 @@ pipeline {
 
         }
 
+         stage('Install Dependencies') {
+            steps {
+                echo "Installing Python dependencies..."
 
+                bat """
+                %PYTHON_EXE% -m pip install --upgrade pip
+                %PYTHON_EXE% -m pip install -r requirements.txt
+                """
+            }
+        }
 
         stage('Install Dependencies') {
 
