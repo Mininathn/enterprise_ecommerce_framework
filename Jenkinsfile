@@ -29,11 +29,14 @@ pipeline {
 
 
 
+
     triggers {
 
         cron('H 9 * * *')
 
     }
+
+
 
 
 
@@ -56,21 +59,32 @@ pipeline {
 
 
 
+
+
         stage('Build Information') {
 
             steps {
 
                 echo """
-                ======================================
+
+                =========================================
+
                 Enterprise Ecommerce ETL Framework
-                ======================================
+
+                =========================================
+
 
                 Build Number : ${BUILD_NUMBER}
+
                 Branch       : ${GIT_BRANCH}
+
                 Commit       : ${GIT_COMMIT}
+
                 Job Name     : ${JOB_NAME}
 
-                ======================================
+
+                =========================================
+
                 """
 
             }
@@ -81,21 +95,51 @@ pipeline {
 
 
 
-        stage('Install Dependencies') {
+
+        stage('Prepare Workspace') {
+
 
             steps {
 
-                echo "Installing Python dependencies..."
+
+                echo "Preparing workspace..."
 
 
                 bat """
 
-                echo Python Version
+                if exist allure-results rmdir /s /q allure-results
+
+                if exist allure-report rmdir /s /q allure-report
+
+
+                if not exist reports mkdir reports
+
+
+                """
+
+            }
+
+        }
+
+
+
+
+
+
+
+
+        stage('Install Dependencies') {
+
+
+            steps {
+
+
+                echo "Installing dependencies..."
+
+
+                bat """
 
                 %PYTHON_EXE% --version
-
-
-                echo Installing packages
 
 
                 %PYTHON_EXE% -m pip install --upgrade pip
@@ -115,23 +159,32 @@ pipeline {
 
 
 
+
+
+
         stage('Run Tests') {
 
+
             steps {
 
 
-                echo "Running Test Suite: ${params.TEST_SUITE}"
+                echo "Running Test Suite : ${params.TEST_SUITE}"
 
 
                 bat """
 
-                echo Executing pytest...
+                echo Starting Pytest Execution
 
 
-                if exist allure-results rmdir /s /q allure-results
+                %PYTHON_EXE% -m pytest tests ^
 
+                -m ${params.TEST_SUITE} ^
 
-                %PYTHON_EXE% -m pytest tests -m ${params.TEST_SUITE} --alluredir=allure-results --html=reports\\pytest-report.html --self-contained-html
+                --alluredir=allure-results ^
+
+                --html=reports\\pytest-report.html ^
+
+                --self-contained-html
 
 
                 """
@@ -146,23 +199,70 @@ pipeline {
 
 
 
-        stage('Generate Test Summary') {
+
+
+        stage('Generate JUnit Report') {
+
 
             steps {
 
-                echo "Generating test summary..."
+
+                echo "Generating JUnit XML report..."
 
 
                 bat """
 
-                dir allure-results
+
+                %PYTHON_EXE% -m pytest tests ^
+
+                -m ${params.TEST_SUITE} ^
+
+                --junitxml=reports\\junit.xml
 
 
                 """
 
+
             }
 
         }
+
+
+
+
+
+
+
+
+
+
+        stage('Generate Allure Report') {
+
+
+            steps {
+
+
+                echo "Generating Allure HTML Report..."
+
+
+                bat """
+
+
+                allure generate allure-results ^
+
+                -o allure-report ^
+
+                --clean
+
+
+                """
+
+
+            }
+
+        }
+
+
 
 
 
@@ -172,12 +272,15 @@ pipeline {
 
         stage('Generate Enterprise Dashboard') {
 
+
             steps {
 
-                echo "Generating Enterprise Dashboard..."
+
+                echo "Generating Sprint 10 Dashboard..."
 
 
                 bat """
+
 
                 %PYTHON_EXE% scripts\\generate_dashboard.py
 
@@ -197,16 +300,33 @@ pipeline {
 
 
 
+
+
         stage('Validate Reports') {
+
 
             steps {
 
-                echo "Validating reports..."
+
+                echo "Checking generated reports..."
 
 
                 bat """
 
+
+                echo ===== REPORTS =====
+
                 dir reports
+
+
+                echo ===== ALLURE =====
+
+                dir allure-results
+
+
+                echo ===== DASHBOARD =====
+
+                dir reports\\enterprise_dashboard.html
 
 
                 """
@@ -225,103 +345,213 @@ pipeline {
 
 
 
-   post {
-
-
-    always {
-
-
-        echo "Publishing Reports..."
+    post {
 
 
 
-        allure(
+        always {
 
-            includeProperties: false,
 
-            jdk: '',
 
-            results: [
-                [path: 'allure-results']
-            ],
-
-            allowEmptyResults: true
-
-        )
+            echo "Publishing Enterprise Reports..."
 
 
 
 
-        publishHTML(
 
-            target: [
 
-                allowMissing: true,
+            allure(
 
-                alwaysLinkToLastBuild: true,
+                includeProperties: false,
 
-                keepAll: true,
+                jdk: '',
 
-                reportDir: 'reports',
+                results: [
 
-                reportFiles: 'enterprise_dashboard.html',
+                    [path: 'allure-results']
 
-                reportName: 'Enterprise Dashboard'
+                ],
 
-            ]
+                allowEmptyResults: true
 
-        )
+            )
 
 
 
 
-        archiveArtifacts(
-
-            artifacts: '''
-            reports/**
-            allure-results/**
-            ''',
-
-            fingerprint: true,
-
-            allowEmptyArchive: true
-
-        )
 
 
 
 
-        junit(
 
-            allowEmptyResults: true,
+            publishHTML(
 
-            testResults: 'reports/junit.xml'
+                target: [
 
-        )
+                    allowMissing: true,
+
+                    alwaysLinkToLastBuild: true,
+
+                    keepAll: true,
+
+                    reportDir: 'reports',
+
+                    reportFiles: 'enterprise_dashboard.html',
+
+                    reportName: 'Enterprise Ecommerce Dashboard'
+
+                ]
+
+            )
 
 
 
-        echo "Reports published successfully."
+
+
+
+
+
+
+            publishHTML(
+
+                target: [
+
+                    allowMissing: true,
+
+                    alwaysLinkToLastBuild: true,
+
+                    keepAll: true,
+
+                    reportDir: 'reports',
+
+                    reportFiles: 'pytest-report.html',
+
+                    reportName: 'Pytest HTML Report'
+
+                ]
+
+            )
+
+
+
+
+
+
+
+
+
+            archiveArtifacts(
+
+                artifacts: '''
+
+                reports/**
+
+                allure-results/**
+
+                allure-report/**
+
+                ''',
+
+                fingerprint: true,
+
+                allowEmptyArchive: true
+
+            )
+
+
+
+
+
+
+
+
+
+
+            junit(
+
+                allowEmptyResults:true,
+
+                testResults:'reports/junit.xml'
+
+            )
+
+
+
+
+
+            echo """
+
+            =====================================
+
+
+            Enterprise Reports Published
+
+
+            Allure Report
+
+            HTML Dashboard
+
+            Pytest Report
+
+            JUnit Report
+
+
+            =====================================
+
+            """
+
+        }
+
+
+
+
+
+
+        success {
+
+
+            echo """
+
+            =====================================
+
+            BUILD SUCCESSFUL
+
+            Sprint 10 Completed
+
+            =====================================
+
+            """
+
+        }
+
+
+
+
+
+
+        failure {
+
+
+            echo """
+
+            =====================================
+
+            BUILD FAILED
+
+
+            Check Jenkins Console Logs
+
+
+            =====================================
+
+            """
+
+        }
+
+
 
     }
 
-
-
-    success {
-
-
-        echo "BUILD SUCCESSFUL"
-
-    }
-
-
-
-    failure {
-
-
-        echo "BUILD FAILED - Check Console Logs"
-
-    }
 
 
 }
