@@ -348,210 +348,200 @@ pipeline {
     post {
 
 
+    always {
 
-        always {
 
+        echo "Publishing Enterprise Reports..."
 
 
-            echo "Publishing Enterprise Reports..."
 
+        // Allure Report Publishing
 
+        allure(
 
+            includeProperties: false,
 
+            jdk: '',
 
+            results: [
 
-            allure(
+                [path: 'allure-results']
 
-                includeProperties: false,
+            ]
 
-                jdk: '',
+        )
 
-                results: [
 
-                    [path: 'allure-results']
 
-                ],
 
-                allowEmptyResults: true
 
-            )
+        // Enterprise Dashboard Publishing
 
+        publishHTML(
 
+            target: [
 
+                allowMissing: true,
 
+                alwaysLinkToLastBuild: true,
 
+                keepAll: true,
 
+                reportDir: 'reports',
 
+                reportFiles: 'enterprise_dashboard.html',
 
+                reportName: 'Enterprise Ecommerce Dashboard'
 
-            publishHTML(
+            ]
 
-                target: [
+        )
 
-                    allowMissing: true,
 
-                    alwaysLinkToLastBuild: true,
 
-                    keepAll: true,
 
-                    reportDir: 'reports',
 
-                    reportFiles: 'enterprise_dashboard.html',
+        // Pytest HTML Report Publishing
 
-                    reportName: 'Enterprise Ecommerce Dashboard'
+        publishHTML(
 
-                ]
+            target: [
 
-            )
+                allowMissing: true,
 
+                alwaysLinkToLastBuild: true,
 
+                keepAll: true,
 
+                reportDir: 'reports',
 
+                reportFiles: 'pytest-report.html',
 
+                reportName: 'Pytest HTML Report'
 
+            ]
 
+        )
 
 
-            publishHTML(
 
-                target: [
 
-                    allowMissing: true,
 
-                    alwaysLinkToLastBuild: true,
+        // Archive Build Artifacts
 
-                    keepAll: true,
+        archiveArtifacts(
 
-                    reportDir: 'reports',
+            artifacts: '''
 
-                    reportFiles: 'pytest-report.html',
+            reports/**
 
-                    reportName: 'Pytest HTML Report'
+            allure-results/**
 
-                ]
+            allure-report/**
 
-            )
+            ''',
 
+            fingerprint: true,
 
+            allowEmptyArchive: true
 
+        )
 
 
 
 
 
+        // Publish JUnit Results
 
-            archiveArtifacts(
+        junit(
 
-                artifacts: '''
+            allowEmptyResults: true,
 
-                reports/**
+            testResults: 'reports/junit.xml'
 
-                allure-results/**
+        )
 
-                allure-report/**
 
-                ''',
 
-                fingerprint: true,
 
-                allowEmptyArchive: true
 
-            )
+        echo """
 
+        =====================================
 
 
+        Enterprise Reports Published Successfully
 
 
+        ✔ Allure Report
 
+        ✔ Enterprise Dashboard
 
+        ✔ Pytest HTML Report
 
+        ✔ JUnit Report
 
+        ✔ Build Artifacts
 
-            junit(
 
-                allowEmptyResults:true,
+        =====================================
 
-                testResults:'reports/junit.xml'
-
-            )
-
-
-
-
-
-            echo """
-
-            =====================================
-
-
-            Enterprise Reports Published
-
-
-            Allure Report
-
-            HTML Dashboard
-
-            Pytest Report
-
-            JUnit Report
-
-
-            =====================================
-
-            """
-
-        }
-
-
-
-
-
-
-        success {
-
-
-            echo """
-
-            =====================================
-
-            BUILD SUCCESSFUL
-
-            Sprint 10 Completed
-
-            =====================================
-
-            """
-
-        }
-
-
-
-
-
-
-        failure {
-
-
-            echo """
-
-            =====================================
-
-            BUILD FAILED
-
-
-            Check Jenkins Console Logs
-
-
-            =====================================
-
-            """
-
-        }
-
-
+        """
 
     }
 
+
+
+
+
+
+    success {
+
+
+        echo """
+
+        =====================================
+
+
+        BUILD SUCCESSFUL
+
+
+        Sprint 10 Completed
+
+
+        Enterprise Dashboard Available
+
+
+        =====================================
+
+        """
+
+    }
+
+
+
+
+
+
+    failure {
+
+
+        echo """
+
+        =====================================
+
+
+        BUILD FAILED
+
+
+        Check Jenkins Console Logs
+
+
+        =====================================
+
+        """
+
+    }
 
 
 }
