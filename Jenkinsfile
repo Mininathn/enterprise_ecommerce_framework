@@ -225,156 +225,103 @@ pipeline {
 
 
 
-    post {
+   post {
 
 
+    always {
 
-        always {
 
+        echo "Publishing Reports..."
 
-            echo "Publishing Reports..."
 
 
+        allure(
 
-            // Allure Report
+            includeProperties: false,
 
-            allure(
+            jdk: '',
 
-                includeProperties: false,
+            results: [
+                [path: 'allure-results']
+            ],
 
-                jdk: '',
+            allowEmptyResults: true
 
-                results: [
+        )
 
-                    [path: 'allure-results']
 
-                ]
 
-            )
 
+        publishHTML(
 
+            target: [
 
+                allowMissing: true,
 
+                alwaysLinkToLastBuild: true,
 
-            // Enterprise HTML Dashboard
+                keepAll: true,
 
-            publishHTML(
+                reportDir: 'reports',
 
-                target: [
+                reportFiles: 'enterprise_dashboard.html',
 
-                    allowMissing: true,
+                reportName: 'Enterprise Dashboard'
 
-                    alwaysLinkToLastBuild: true,
+            ]
 
-                    keepAll: true,
+        )
 
-                    reportDir: 'reports',
 
-                    reportFiles: 'enterprise_dashboard.html',
 
-                    reportName: 'Enterprise Dashboard'
 
-                ]
+        archiveArtifacts(
 
-            )
+            artifacts: '''
+            reports/**
+            allure-results/**
+            ''',
 
+            fingerprint: true,
 
+            allowEmptyArchive: true
 
+        )
 
 
 
 
-            // Archive Reports
+        junit(
 
-            archiveArtifacts(
+            allowEmptyResults: true,
 
-                artifacts: '''
+            testResults: 'reports/junit.xml'
 
-                reports/**
+        )
 
-                allure-results/**
 
-                allure-report/**
 
-                ''',
-
-                fingerprint: true
-
-            )
-
-
-
-
-
-
-
-            // JUnit Result
-
-            junit(
-
-                allowEmptyResults: true,
-
-                testResults: 'reports/junit.xml'
-
-            )
-
-
-
-            echo "All reports published successfully."
-
-
-        }
-
-
-
-
-
-        success {
-
-
-            echo """
-
-            =====================================
-
-            BUILD SUCCESSFUL
-
-            Enterprise Ecommerce Framework
-
-            =====================================
-
-            """
-
-
-        }
-
-
-
-
-
-
-
-        failure {
-
-
-            echo """
-
-            =====================================
-
-            BUILD FAILED
-
-            Check Jenkins Console Logs
-
-            =====================================
-
-            """
-
-
-        }
-
-
+        echo "Reports published successfully."
 
     }
 
+
+
+    success {
+
+
+        echo "BUILD SUCCESSFUL"
+
+    }
+
+
+
+    failure {
+
+
+        echo "BUILD FAILED - Check Console Logs"
+
+    }
 
 
 }
