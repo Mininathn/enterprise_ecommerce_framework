@@ -7,8 +7,6 @@ pipeline {
 
         PYTHON_EXE = "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
 
-        BUILD_TIME = "${new Date().format('yyyy-MM-dd HH:mm:ss')}"
-
     }
 
 
@@ -45,14 +43,11 @@ pipeline {
 
         stage('Checkout Source Code') {
 
-
             steps {
-
 
                 echo "Checking out source code..."
 
                 checkout scm
-
 
             }
 
@@ -61,26 +56,22 @@ pipeline {
 
 
 
-
         stage('Build Information') {
-
 
             steps {
 
-
                 echo """
-                ================================
-                Enterprise Ecommerce Framework
-                ================================
+                ======================================
+                Enterprise Ecommerce ETL Framework
+                ======================================
 
                 Build Number : ${BUILD_NUMBER}
                 Branch       : ${GIT_BRANCH}
                 Commit       : ${GIT_COMMIT}
-                Build Time   : ${BUILD_TIME}
+                Job Name     : ${JOB_NAME}
 
-                ================================
+                ======================================
                 """
-
 
             }
 
@@ -92,9 +83,7 @@ pipeline {
 
         stage('Install Dependencies') {
 
-
             steps {
-
 
                 echo "Installing Python dependencies..."
 
@@ -106,7 +95,7 @@ pipeline {
                 %PYTHON_EXE% --version
 
 
-                echo Installing packages...
+                echo Installing packages
 
 
                 %PYTHON_EXE% -m pip install --upgrade pip
@@ -125,8 +114,8 @@ pipeline {
 
 
 
-        stage('Run Tests') {
 
+        stage('Run Tests') {
 
             steps {
 
@@ -136,26 +125,22 @@ pipeline {
 
                 bat """
 
+                echo Executing pytest...
+
+
                 if exist allure-results rmdir /s /q allure-results
 
 
-                %PYTHON_EXE% -m pytest tests ^
-
-                -m ${params.TEST_SUITE} ^
-
-                --alluredir=allure-results ^
-
-                --html=reports\\pytest-report.html ^
-
-                --self-contained-html
+                %PYTHON_EXE% -m pytest tests -m ${params.TEST_SUITE} --alluredir=allure-results --html=reports\\pytest-report.html --self-contained-html
 
 
                 """
 
-
             }
 
         }
+
+
 
 
 
@@ -163,26 +148,14 @@ pipeline {
 
         stage('Generate Test Summary') {
 
-
             steps {
-
 
                 echo "Generating test summary..."
 
 
                 bat """
 
-                if exist allure-results (
-
-                    dir allure-results
-
-                )
-
-                else (
-
-                    echo No allure results found
-
-                )
+                dir allure-results
 
 
                 """
@@ -190,6 +163,8 @@ pipeline {
             }
 
         }
+
+
 
 
 
@@ -197,15 +172,12 @@ pipeline {
 
         stage('Generate Enterprise Dashboard') {
 
-
             steps {
-
 
                 echo "Generating Enterprise Dashboard..."
 
 
                 bat """
-
 
                 %PYTHON_EXE% scripts\\generate_dashboard.py
 
@@ -213,12 +185,9 @@ pipeline {
                 %PYTHON_EXE% scripts\\generate_html_dashboard.py
 
 
-
                 """
 
-
             }
-
 
         }
 
@@ -226,26 +195,23 @@ pipeline {
 
 
 
-        stage('Validate Dashboard') {
 
+
+        stage('Validate Reports') {
 
             steps {
 
-
-                echo "Checking dashboard files..."
+                echo "Validating reports..."
 
 
                 bat """
-
 
                 dir reports
 
 
                 """
 
-
             }
-
 
         }
 
@@ -257,6 +223,8 @@ pipeline {
 
 
 
+
+
     post {
 
 
@@ -264,52 +232,49 @@ pipeline {
         always {
 
 
-            echo "Publishing All Reports..."
+            echo "Publishing Reports..."
 
 
+
+            // Allure Report
 
             allure(
-
 
                 includeProperties: false,
 
                 jdk: '',
 
-                results: [[path: 'allure-results']]
+                results: [
 
-
-            )
-
-
-
-
-
-            publishHTML(
-
-
-                target: [
-
-
-                    allowMissing: true,
-
-
-                    alwaysLinkToLastBuild: true,
-
-
-                    keepAll: true,
-
-
-                    reportDir: 'reports',
-
-
-                    reportFiles: 'enterprise_dashboard.html',
-
-
-                    reportName: 'Enterprise Dashboard'
-
+                    [path: 'allure-results']
 
                 ]
 
+            )
+
+
+
+
+
+            // Enterprise HTML Dashboard
+
+            publishHTML(
+
+                target: [
+
+                    allowMissing: true,
+
+                    alwaysLinkToLastBuild: true,
+
+                    keepAll: true,
+
+                    reportDir: 'reports',
+
+                    reportFiles: 'enterprise_dashboard.html',
+
+                    reportName: 'Enterprise Dashboard'
+
+                ]
 
             )
 
@@ -317,48 +282,45 @@ pipeline {
 
 
 
+
+
+            // Archive Reports
 
             archiveArtifacts(
 
-
                 artifacts: '''
-
 
                 reports/**
 
-
                 allure-results/**
-
 
                 allure-report/**
 
-
-                ''' ,
-
+                ''',
 
                 fingerprint: true
 
-
             )
 
 
 
 
+
+
+
+            // JUnit Result
 
             junit(
 
-
                 allowEmptyResults: true,
 
-
                 testResults: 'reports/junit.xml'
-
 
             )
 
 
 
-            echo "Reports Published Successfully"
+            echo "All reports published successfully."
 
 
         }
@@ -372,17 +334,20 @@ pipeline {
 
             echo """
 
-            ==================================
+            =====================================
 
-            BUILD SUCCESS
+            BUILD SUCCESSFUL
 
             Enterprise Ecommerce Framework
 
-            ==================================
+            =====================================
 
             """
 
+
         }
+
+
 
 
 
@@ -393,20 +358,23 @@ pipeline {
 
             echo """
 
-            ==================================
+            =====================================
 
             BUILD FAILED
 
-            Check Console Logs
+            Check Jenkins Console Logs
 
-            ==================================
+            =====================================
 
             """
+
 
         }
 
 
+
     }
+
 
 
 }
