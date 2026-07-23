@@ -1,0 +1,32 @@
+services:
+
+  enterprise-etl:
+
+    build:
+      context: .
+
+    image: enterprise-etl-framework:latest
+
+    container_name: enterprise-etl
+
+    environment:
+      ORACLE_HOST: ${ORACLE_HOST}
+      ORACLE_PORT: ${ORACLE_PORT}
+      ORACLE_SID: ${ORACLE_SID}
+      ORACLE_USER: ${ORACLE_USER}
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
+
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    volumes:
+      - ./reports:/app/reports
+
+    command:
+      - --suite
+      - api
+
+    restart: "no"
