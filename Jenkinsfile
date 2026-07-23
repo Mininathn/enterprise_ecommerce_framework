@@ -29,7 +29,6 @@ pipeline {
 
 
 
-
     triggers {
 
         cron('H 9 * * *')
@@ -38,10 +37,7 @@ pipeline {
 
 
 
-
-
     stages {
-
 
 
         stage('Checkout Source Code') {
@@ -59,8 +55,6 @@ pipeline {
 
 
 
-
-
         stage('Build Information') {
 
             steps {
@@ -70,6 +64,8 @@ pipeline {
                 =========================================
 
                 Enterprise Ecommerce ETL Framework
+
+                Sprint 10 Enterprise Dashboard
 
                 =========================================
 
@@ -94,16 +90,11 @@ pipeline {
 
 
 
-
-
         stage('Prepare Workspace') {
-
 
             steps {
 
-
-                echo "Preparing workspace..."
-
+                echo "Cleaning workspace..."
 
                 bat """
 
@@ -124,17 +115,11 @@ pipeline {
 
 
 
-
-
-
-
         stage('Install Dependencies') {
-
 
             steps {
 
-
-                echo "Installing dependencies..."
+                echo "Installing Python dependencies..."
 
 
                 bat """
@@ -158,79 +143,35 @@ pipeline {
 
 
 
-
-
-
-
         stage('Run Tests') {
 
 
             steps {
 
 
-                echo "Running Test Suite : ${params.TEST_SUITE}"
+                echo "Executing Test Suite : ${params.TEST_SUITE}"
 
 
                 bat """
 
-                echo Starting Pytest Execution
+                echo ================================
+                echo Running Pytest
+                echo ================================
 
 
                 %PYTHON_EXE% -m pytest tests ^
-
                 -m ${params.TEST_SUITE} ^
-
                 --alluredir=allure-results ^
-
                 --html=reports\\pytest-report.html ^
-
-                --self-contained-html
-
-
-                """
-
-            }
-
-        }
-
-
-
-
-
-
-
-
-
-        stage('Generate JUnit Report') {
-
-
-            steps {
-
-
-                echo "Generating JUnit XML report..."
-
-
-                bat """
-
-
-                %PYTHON_EXE% -m pytest tests ^
-
-                -m ${params.TEST_SUITE} ^
-
+                --self-contained-html ^
                 --junitxml=reports\\junit.xml
 
 
                 """
 
-
             }
 
         }
-
-
-
-
-
 
 
 
@@ -247,24 +188,16 @@ pipeline {
 
                 bat """
 
-
                 allure generate allure-results ^
-
                 -o allure-report ^
-
                 --clean
 
 
                 """
 
-
             }
 
         }
-
-
-
-
 
 
 
@@ -276,11 +209,10 @@ pipeline {
             steps {
 
 
-                echo "Generating Sprint 10 Dashboard..."
+                echo "Generating Enterprise Dashboard..."
 
 
                 bat """
-
 
                 %PYTHON_EXE% scripts\\generate_dashboard.py
 
@@ -299,9 +231,6 @@ pipeline {
 
 
 
-
-
-
         stage('Validate Reports') {
 
 
@@ -313,18 +242,23 @@ pipeline {
 
                 bat """
 
-
-                echo ===== REPORTS =====
+                echo ==========================
+                echo Reports Folder
+                echo ==========================
 
                 dir reports
 
 
-                echo ===== ALLURE =====
+                echo ==========================
+                echo Allure Results
+                echo ==========================
 
                 dir allure-results
 
 
-                echo ===== DASHBOARD =====
+                echo ==========================
+                echo Dashboard
+                echo ==========================
 
                 dir reports\\enterprise_dashboard.html
 
@@ -337,10 +271,7 @@ pipeline {
 
 
 
-
-
     }
-
 
 
 
@@ -348,200 +279,198 @@ pipeline {
     post {
 
 
-    always {
 
+        always {
 
-        echo "Publishing Enterprise Reports..."
 
+            echo "Publishing Enterprise Reports..."
 
 
-        // Allure Report Publishing
 
-        allure(
+            // Allure Report
 
-            includeProperties: false,
+            allure(
 
-            jdk: '',
+                includeProperties: false,
 
-            results: [
+                jdk: '',
 
-                [path: 'allure-results']
+                results: [
 
-            ]
+                    [path: 'allure-results']
 
-        )
+                ]
 
+            )
 
 
 
 
-        // Enterprise Dashboard Publishing
 
-        publishHTML(
+            // Enterprise Dashboard
 
-            target: [
+            publishHTML(
 
-                allowMissing: true,
+                target: [
 
-                alwaysLinkToLastBuild: true,
+                    allowMissing: true,
 
-                keepAll: true,
+                    alwaysLinkToLastBuild: true,
 
-                reportDir: 'reports',
+                    keepAll: true,
 
-                reportFiles: 'enterprise_dashboard.html',
+                    reportDir: 'reports',
 
-                reportName: 'Enterprise Ecommerce Dashboard'
+                    reportFiles: 'enterprise_dashboard.html',
 
-            ]
+                    reportName: 'Enterprise Ecommerce Dashboard'
 
-        )
+                ]
 
+            )
 
 
 
 
-        // Pytest HTML Report Publishing
 
-        publishHTML(
+            // Pytest HTML Report
 
-            target: [
+            publishHTML(
 
-                allowMissing: true,
+                target: [
 
-                alwaysLinkToLastBuild: true,
+                    allowMissing: true,
 
-                keepAll: true,
+                    alwaysLinkToLastBuild: true,
 
-                reportDir: 'reports',
+                    keepAll: true,
 
-                reportFiles: 'pytest-report.html',
+                    reportDir: 'reports',
 
-                reportName: 'Pytest HTML Report'
+                    reportFiles: 'pytest-report.html',
 
-            ]
+                    reportName: 'Pytest HTML Report'
 
-        )
+                ]
 
+            )
 
 
 
 
-        // Archive Build Artifacts
 
-        archiveArtifacts(
+            // Archive Reports
 
-            artifacts: '''
+            archiveArtifacts(
 
-            reports/**
+                artifacts: '''
 
-            allure-results/**
+                reports/**
 
-            allure-report/**
+                allure-results/**
 
-            ''',
+                allure-report/**
 
-            fingerprint: true,
+                ''',
 
-            allowEmptyArchive: true
+                fingerprint: true,
 
-        )
+                allowEmptyArchive: true
 
+            )
 
 
 
 
-        // Publish JUnit Results
 
-        junit(
+            // JUnit Report
 
-            allowEmptyResults: true,
+            junit(
 
-            testResults: 'reports/junit.xml'
+                allowEmptyResults: true,
 
-        )
+                testResults: 'reports/junit.xml'
 
+            )
 
 
 
 
-        echo """
 
-        =====================================
+            echo """
 
+            =====================================
 
-        Enterprise Reports Published Successfully
+            Enterprise Reports Published
 
 
-        ✔ Allure Report
+            ✔ Allure Report
 
-        ✔ Enterprise Dashboard
+            ✔ Enterprise Dashboard
 
-        ✔ Pytest HTML Report
+            ✔ Pytest HTML Report
 
-        ✔ JUnit Report
+            ✔ JUnit Report
 
-        ✔ Build Artifacts
 
+            =====================================
 
-        =====================================
+            """
 
-        """
+        }
+
+
+
+
+
+
+        success {
+
+
+            echo """
+
+            =====================================
+
+            BUILD SUCCESSFUL
+
+
+            Sprint 10 Completed
+
+
+            =====================================
+
+            """
+
+        }
+
+
+
+
+
+
+        failure {
+
+
+            echo """
+
+            =====================================
+
+            BUILD FAILED
+
+
+            Check Jenkins Console Logs
+
+
+            =====================================
+
+            """
+
+        }
+
+
 
     }
 
-
-
-
-
-
-    success {
-
-
-        echo """
-
-        =====================================
-
-
-        BUILD SUCCESSFUL
-
-
-        Sprint 10 Completed
-
-
-        Enterprise Dashboard Available
-
-
-        =====================================
-
-        """
-
-    }
-
-
-
-
-
-
-    failure {
-
-
-        echo """
-
-        =====================================
-
-
-        BUILD FAILED
-
-
-        Check Jenkins Console Logs
-
-
-        =====================================
-
-        """
-
-    }
 
 
 }
