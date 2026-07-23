@@ -145,19 +145,35 @@ pipeline {
 
         stage('Run Tests') {
 
+    steps {
 
-            steps {
+        script {
 
+            echo "Executing Test Suite : ${params.TEST_SUITE}"
 
-                echo "Executing Test Suite : ${params.TEST_SUITE}"
-
+            if (params.TEST_SUITE == 'all') {
 
                 bat """
 
                 echo ================================
-                echo Running Pytest
+                echo Running ALL Tests
                 echo ================================
 
+                %PYTHON_EXE% -m pytest tests ^
+                --alluredir=allure-results ^
+                --html=reports\\pytest-report.html ^
+                --self-contained-html ^
+                --junitxml=reports\\junit.xml
+
+                """
+
+            } else {
+
+                bat """
+
+                echo ================================
+                echo Running ${params.TEST_SUITE} Tests
+                echo ================================
 
                 %PYTHON_EXE% -m pytest tests ^
                 -m ${params.TEST_SUITE} ^
@@ -166,13 +182,15 @@ pipeline {
                 --self-contained-html ^
                 --junitxml=reports\\junit.xml
 
-
                 """
 
             }
 
         }
 
+    }
+
+}
 
 
 
